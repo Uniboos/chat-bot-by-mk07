@@ -1,169 +1,122 @@
-<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futuristic Chat App</title>
-    <style>
-        /* Global Styles */
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(45deg, #1a1a1d, #0f0f10);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        h2 {
-            color: #00bcd4;
-            text-shadow: 0 0 20px rgba(0, 188, 212, 0.7);
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-        }
-
-        /* Chat Box Styling */
-        #chat-box {
-            width: 90%;
-            max-width: 500px;
-            height: 400px;
-            border-radius: 10px;
-            border: 2px solid #00bcd4;
-            background: rgba(0, 0, 0, 0.6);
-            overflow-y: scroll;
-            padding: 20px;
-            box-shadow: 0 0 30px rgba(0, 188, 212, 0.8);
-            margin: auto;
-            position: relative;
-        }
-        #chat-box div {
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 10px;
-            animation: message-appear 0.5s ease-in-out;
-        }
-
-        /* Neon Message Bubbles */
-        .user-msg {
-            background: #00bcd4;
-            color: black;
-            align-self: flex-end;
-            animation: fade-in 0.6s ease-out;
-        }
-        .other-msg {
-            background: #e91e63;
-            color: white;
-            align-self: flex-start;
-            animation: fade-in 0.6s ease-out;
-        }
-
-        /* Input Field and Button Styling */
-        input {
-            width: 80%;
-            padding: 10px;
-            font-size: 1.1rem;
-            border: none;
-            border-radius: 25px;
-            margin: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            outline: none;
-            box-shadow: 0 0 15px rgba(0, 188, 212, 0.6);
-            transition: background 0.3s ease;
-        }
-        input:focus {
-            background: rgba(0, 188, 212, 0.3);
-        }
-        button {
-            padding: 12px 20px;
-            background: #00bcd4;
-            border: none;
-            border-radius: 25px;
-            font-size: 1.2rem;
-            color: white;
-            cursor: pointer;
-            outline: none;
-            box-shadow: 0 0 20px rgba(0, 188, 212, 0.6);
-            transition: transform 0.3s ease, background 0.3s ease;
-        }
-        button:hover {
-            background: #e91e63;
-            transform: scale(1.1);
-        }
-
-        /* Animations */
-        @keyframes fade-in {
-            0% {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes message-appear {
-            0% {
-                opacity: 0;
-                transform: scale(0.5);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-    </style>
+    <title>Futuristic Chat</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Linking external CSS -->
 </head>
 <body>
 
-    <div>
-        <h2>Futuristic Chat</h2>
+    <div class="container">
+        <h2> LinkX chat</h>
+        
+        <div id="user-info">
+            <img id="user-pic" src="default-user.png" alt="User">
+            <span id="user-name">Not Logged In</span>
+            <button id="login-btn">Login with Google</button>
+            <button id="logout-btn" style="display: none;">Logout</button>
+        </div>
+
         <div id="chat-box"></div>
-        <div style="display: flex; justify-content: center; align-items: center; margin-top: 10px;">
+
+        <p id="typing-indicator" style="display: none;">Someone is typing...</p>
+
+        <div class="input-container">
             <input type="text" id="message" placeholder="Type your message...">
             <button onclick="sendMessage()">Send</button>
         </div>
     </div>
 
- <!-- Firebase SDK -->
+    <!-- Firebase SDK -->
     <script type="module">
-        // Import Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, push, onChildAdded, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        // Your Firebase Config
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyBX5SoeUphB0vWq-sUnCO-tbSZq5crmwKY",
-            authDomain: "chatting-app-60576.firebaseapp.com",
-            databaseURL: "https://chatting-app-60576-default-rtdb.firebaseio.com/",
-            projectId: "chatting-app-60576",
-            storageBucket: "chatting-app-60576.firebasestorage.app",
-            messagingSenderId: "599623633340",
-            appId: "1:599623633340:web:889751fa01ddc8149983b9"
+    authDomain: "chatting-app-60576.firebaseapp.com",
+    projectId: "chatting-app-60576",
+    storageBucket: "chatting-app-60576.firebasestorage.app",
+    messagingSenderId: "599623633340",
+    appId: "1:599623633340:web:889751fa01ddc8149983b9"
         };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const chatRef = ref(db, "messages");
+        const typingRef = ref(db, "typing");
+        const auth = getAuth();
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+
+        // Google Login
+        document.getElementById("login-btn").addEventListener("click", () => {
+            signInWithPopup(auth, provider).then((result) => {
+                currentUser = result.user;
+                document.getElementById("user-name").textContent = currentUser.displayName;
+                document.getElementById("user-pic").src = currentUser.photoURL;
+                document.getElementById("login-btn").style.display = "none";
+                document.getElementById("logout-btn").style.display = "block";
+            });
+        });
+
+        // Logout
+        document.getElementById("logout-btn").addEventListener("click", () => {
+            signOut(auth).then(() => {
+                document.getElementById("user-name").textContent = "Not Logged In";
+                document.getElementById("user-pic").src = "default-user.png";
+                document.getElementById("login-btn").style.display = "block";
+                document.getElementById("logout-btn").style.display = "none";
+                currentUser = null;
+            });
+        });
 
         // Send Message
         window.sendMessage = function () {
             let msg = document.getElementById("message").value;
-            if (msg.trim() !== "") {
-                push(chatRef, msg);
+            if (msg.trim() !== "" && currentUser) {
+                push(chatRef, {
+                    text: msg,
+                    user: currentUser.displayName,
+                    photo: currentUser.photoURL,
+                    timestamp: new Date().toLocaleTimeString()
+                });
                 document.getElementById("message").value = "";
+                set(typingRef, { typing: false });
             }
         };
 
         // Receive Messages
         onChildAdded(chatRef, (snapshot) => {
+            let data = snapshot.val();
             let msgDiv = document.createElement("div");
-            msgDiv.textContent = snapshot.val();
+            msgDiv.classList.add("message");
+            msgDiv.innerHTML = `
+                <img src="${data.photo}" class="user-pic">
+                <div class="${data.user === currentUser?.displayName ? "my-msg" : "other-msg"}">
+                    <b>${data.user}</b>
+                    <p>${data.text}</p>
+                    <small>${data.timestamp}</small>
+                </div>
+            `;
             document.getElementById("chat-box").appendChild(msgDiv);
             document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+        });
+
+        // Typing Indicator
+        document.getElementById("message").addEventListener("input", () => {
+            set(typingRef, { typing: true });
+            setTimeout(() => set(typingRef, { typing: false }), 2000);
+        });
+
+        onValue(typingRef, (snapshot) => {
+            let data = snapshot.val();
+            document.getElementById("typing-indicator").style.display = data?.typing ? "block" : "none";
         });
     </script>
 
